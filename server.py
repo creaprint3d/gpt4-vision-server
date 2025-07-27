@@ -1,22 +1,27 @@
 from flask import Flask, request, jsonify
+import os
 
 app = Flask(__name__)
 
-# Variable globale pour stocker la dernière description reçue
-description_from_webcam = "Aucune donnée reçue."
+@app.route("/receive_gpt_description", methods=["POST"])
+def receive_gpt_description():
+    data = request.json
+    description = data.get("description")
 
-@app.route("/camera_vision_report", methods=["GET"])
-def get_description():
-    return jsonify({"description": description_from_webcam})
+    if description:
+        print("📨 Description reçue :", description)
+        return jsonify({
+            "status": "received",
+            "message": "Description bien reçue par le serveur.",
+            "description": description
+        })
+    else:
+        return jsonify({
+            "status": "error",
+            "message": "Aucune description reçue."
+        }), 400
 
-@app.route("/update_description", methods=["POST"])
-def update_description():
-    global description_from_webcam
-    data = request.get_json()
-    description_from_webcam = data.get("description", "Donnée manquante.")
-    return jsonify({"message": "Description mise à jour."})
-
+# Pour Render : expose bien le port attendu
 if __name__ == "__main__":
-    import os
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)
