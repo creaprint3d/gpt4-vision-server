@@ -1,58 +1,50 @@
-# server.py
-from flask import Flask, request, jsonify
+import os
 import base64
 import io
+from flask import Flask, request, jsonify
 from PIL import Image
 import openai
-import os
 
 app = Flask(__name__)
 
-# === Configuration ===
-OPENAI_API_KEY = "sk-P3mdbWLcTmbVYiHvtli5Pejo2gsaVVDZD7kHYEMB_0T3BlbkFJAHeXlhwJuC1ry05XqtEPog5T2fGRyMJN_X9lqxO-kA"
-openai.api_key = OPENAI_API_KEY
+# === Config ===
+openai.api_key = "sk-P3mdbWLcTmbVYiHvtli5Pejo2gsaVVDZD7kHYEMB_0T3BlbkFJAHeXlhwJuC1ry05XqtEPog5T2fGRyMJN_X9lqxO-kA"
+model = "gpt-4o"  # ou "gpt-4-turbo" sans image
 
-# === Route principale attendue par Convai ===
-@app.route('/camera_vision_report', methods=['POST'])
+@app.route("/camera_vision_report", methods=["POST"])
 def camera_vision_report():
     try:
         data = request.get_json()
-        image_base64 = data.get("image")
+        image_b64 = data.get("image")
+        if not image_b64:
+            return jsonify({"error": "No image provided"}), 400
 
-        if not image_base64:
-            return jsonify({"error": "Aucune image fournie."}), 400
-
-        # Decode base64 image
-        image_bytes = base64.b64decode(image_base64)
+        # Décodage image
+        image_bytes = base64.b64decode(image_b64)
         image = Image.open(io.BytesIO(image_bytes))
 
-        # Appel GPT-4o
-        print("🧠 Analyse de l'image avec GPT-4o...")
+        # Envoi à GPT
         response = openai.chat.completions.create(
-            model="gpt-4o",
+            model=model,
             messages=[
-                {"role": "system", "content": "Tu es un assistant qui décrit précisément ce qu’il voit sur une image, y compris l’émotion si un visage est visible."},
-                {"role": "user", "content": [
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}}
-                ]}
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "Décris précisément ce que tu vois sur cette image."},
+                        {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + image_b64}}
+                    ]
+                }
             ],
             max_tokens=300
         )
 
         result = response.choices[0].message.content
-        print("✅ Description :", result)
-
         return jsonify({"description": result})
 
     except Exception as e:
-        print("❌ Erreur :", str(e))
         return jsonify({"error": str(e)}), 500
 
-
-@app.route('/', methods=['GET'])
-def home():
-    return "OK: serveur en ligne"
-
-# === Lancer le serveur localement ===
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+# === Lancer le serveur sur le bon port ===
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)
