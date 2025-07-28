@@ -1,27 +1,27 @@
 from flask import Flask, request, jsonify
-import os
 
 app = Flask(__name__)
 
-@app.route("/receive_gpt_description", methods=["POST"])
+@app.route('/receive_gpt_description', methods=['POST'])
 def receive_gpt_description():
-    data = request.json
-    description = data.get("description")
-
-    if description:
-        print("📨 Description reçue :", description)
+    try:
+        data = request.get_json()
+        description = data.get('description', 'Aucune description reçue.')
+        print("📩 Description reçue du script local :")
+        print(description)
         return jsonify({
-            "status": "received",
-            "message": "Description bien reçue par le serveur.",
+            "status": "success",
+            "message": "Description reçue avec succès",
             "description": description
-        })
-    else:
+        }), 200
+    except Exception as e:
         return jsonify({
             "status": "error",
-            "message": "Aucune description reçue."
-        }), 400
+            "message": str(e)
+        }), 500
 
-# Pour Render : expose bien le port attendu
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+# Port automatique pour Render
+if __name__ == '__main__':
+    import os
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port, debug=True)
